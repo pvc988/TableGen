@@ -1,0 +1,8 @@
+Makefile
+dictionary.c
+dictionary.h
+grammar.c
+grammar.h
+main.c
+vector.c
+vector.h
