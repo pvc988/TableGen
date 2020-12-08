@@ -19,6 +19,13 @@ void VectorDelete(Vector *vec)
     free(vec);
 }
 
+void *VectorGetItem(Vector *vec, size_t idx)
+{
+    if(idx >= vec->ItemCount)
+        return 0;
+    return vec->Items[idx];
+}
+
 void VectorInsertItem(Vector *vec, size_t idx, void *data)
 {
     if(idx > vec->ItemCount) return;
@@ -100,4 +107,20 @@ size_t VectorMergeItems(Vector *dst, Vector *src, VectorItemEqualityComparer com
             ++added;
     }
     return added;
+}
+
+size_t VectorIndexOf(Vector *vec, void *data)
+{
+    for(size_t i = 0; i < vec->ItemCount; ++i)
+    {
+        if(vec->Items[i] == data)
+            return i;
+    }
+    return (size_t)-1;
+}
+
+void VectorAppendItems(Vector *dst, Vector *src)
+{
+    for(size_t i = 0; i < src->ItemCount; ++i)
+        VectorAppendItem(dst, src->Items[i]);
 }

@@ -7,6 +7,7 @@ OBJS = main.o \
        production.o \
        state.o \
        symbol.o \
+       transition.o \
        vector.o
 
 CC ?= gcc

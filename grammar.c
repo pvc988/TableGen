@@ -198,6 +198,14 @@ Grammar *GrammarFromFile(const char *filename)
     if(prod0->Right->Items[prod0Len - 1] != grammar->EndOfInput)
         VectorAppendItem(prod0->Right, grammar->EndOfInput);
 
+    // assign unique index to each production
+    // (for easier table generations)
+    for(size_t i = 0 ; i < grammar->Productions->ItemCount; ++i)
+    {
+        Production *prod = (Production *)grammar->Productions->Items[i];
+        prod->Index = i;
+    }
+
     // print productions
     fprintf(stderr, "\nProductions:\n");
     for(size_t i = 0 ; i < grammar->Productions->ItemCount; ++i)
@@ -282,7 +290,7 @@ void GrammarBuildFirstSets(Grammar *grammar)
     for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
     {
         Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
-        fprintf(stderr, "'%s': ", sym->Name);
+        fprintf(stderr, "'%s':", sym->Name);
         for(size_t i = 0; i < sym->First->ItemCount; ++i)
         {
             Symbol *s = (Symbol *)sym->First->Items[i];

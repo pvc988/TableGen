@@ -15,4 +15,7 @@ typedef struct Item
 } Item;
 
 Item *ItemCreate(bool core, Production *prod, size_t pos);
+Item *ItemCreateLA(bool core, Production *prod, size_t pos, Vector *lookaheads);
 void ItemDelete(Item *item);
+bool ItemSimilar(Item *a, Item *b);
+bool ItemEquivalent(Item *a, Item *b);
