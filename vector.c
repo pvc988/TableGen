@@ -60,3 +60,44 @@ void VectorDeleteItem(Vector *vec, size_t idx)
         vec->AllocatedItems = itemsNeeded;
     }
 }
+
+bool VectorContainsItem(Vector *vec, void *data, VectorItemEqualityComparer comparer)
+{
+    if(!comparer)
+    {
+        for(size_t i = 0; i < vec->ItemCount; ++i)
+        {
+            if(vec->Items[i] == data)
+                return true;
+        }
+    }
+    else
+    {
+        for(size_t i = 0; i < vec->ItemCount; ++i)
+        {
+            if(comparer(vec->Items[i], data))
+                return true;
+        }
+    }
+    return false;
+}
+
+bool VectorAppendIfUnique(Vector *vec, void *data, VectorItemEqualityComparer comparer)
+{
+    if(VectorContainsItem(vec, data, comparer))
+        return false;
+    VectorAppendItem(vec, data);
+    return true;
+}
+
+size_t VectorMergeItems(Vector *dst, Vector *src, VectorItemEqualityComparer comparer)
+{
+    size_t added = 0;
+    for(size_t i = 0; i < src->ItemCount; ++i)
+    {
+        void *item = src->Items[i];
+        if(VectorAppendIfUnique(dst, item, comparer))
+            ++added;
+    }
+    return added;
+}

@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 
     Grammar *grammar = GrammarFromFile(grammarFileName);
     if(!grammar) return -1;
+    GrammarBuildFirstSets(grammar);
 
     return 0;
 }

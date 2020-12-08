@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "grammar.h"
+#include "production.h"
+#include "symbol.h"
 
 static const char *endOfInputSymbolName = "$";
 static const char *emptySymbolName = "~";
@@ -12,37 +14,6 @@ static const char *errorSymbolName = "!";
 static void msgMalformed(void)
 {
     fprintf(stderr, "Malformed rule\n");
-}
-
-Symbol *SymbolCreate(const char *name, bool terminal)
-{
-    Symbol *sym = (Symbol *)calloc(1, sizeof(Symbol));
-    sym->Name = strdup(name);
-    sym->Terminal = terminal;
-    return sym;
-}
-
-void SymbolDelete(Symbol *sym)
-{
-    if(sym->Name) free(sym->Name);
-    if(sym->First) VectorDelete(sym->First);
-    free(sym);
-}
-
-Production *ProductionCreate(char *id, Symbol *left, Vector *right)
-{
-    Production *prod = (Production *)malloc(sizeof(Production));
-    prod->Id = id ? strdup(id) : 0;
-    prod->Left = left;
-    prod->Right = right;
-    return prod;
-}
-
-void ProductionDelete(Production *prod)
-{
-    if(prod->Id) free(prod->Id);
-    if(prod->Right) VectorDelete(prod->Right);
-    free(prod);
 }
 
 Grammar *GrammarFromFile(const char *filename)
@@ -144,7 +115,6 @@ Grammar *GrammarFromFile(const char *filename)
         for(char *right = rightSide; ; ++right)
         {
             char c = *right;
-            if(!c) break;
 
             if(c == ' ' || !c)
             {
@@ -160,7 +130,7 @@ Grammar *GrammarFromFile(const char *filename)
                         DictionaryAddItem(grammar->Symbols, symbolStart, sym);
                     }
                     VectorAppendItem(rightSyms, sym);
-                    symbolStart = ++right;
+                    if(c) symbolStart = ++right;
                     c = *right;
                 }
                 else
@@ -271,4 +241,53 @@ void GrammarDelete(Grammar *grammar)
     if(grammar->Productions) VectorDelete(grammar->Productions);
     if(grammar->Symbols) DictionaryDelete(grammar->Symbols);
     free(grammar);
+}
+
+void GrammarBuildFirstSets(Grammar *grammar)
+{
+    // calculate first sets for all terminals
+    for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
+    {
+        Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
+        if(!sym->Terminal) continue;
+        VectorAppendItem(sym->First, sym);
+    }
+
+    // now time for the rest
+    for(bool updated = true; updated;)
+    {
+        updated = false;
+        for(size_t i = 0; i < grammar->Productions->ItemCount; ++i)
+        {
+            Production *prod = (Production *)grammar->Productions->Items[i];
+            Symbol *left = prod->Left;
+            size_t symIdx;
+            for(symIdx = 0; symIdx < prod->Right->ItemCount; ++symIdx)
+            {
+                Symbol *sym = (Symbol *)prod->Right->Items[symIdx];
+                updated |= VectorMergeItems(left->First, sym->First, 0);
+                if(!sym->Nullable)
+                    break;
+            }
+            if(symIdx == prod->Right->ItemCount)
+            {
+                updated |= !left->Nullable;
+                left->Nullable = true;
+            }
+        }
+    }
+
+    // print first sets
+    fprintf(stderr, "\nFirst sets:\n");
+    for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
+    {
+        Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
+        fprintf(stderr, "'%s': ", sym->Name);
+        for(size_t i = 0; i < sym->First->ItemCount; ++i)
+        {
+            Symbol *s = (Symbol *)sym->First->Items[i];
+            fprintf(stderr, " %s", s->Name);
+        }
+        fprintf(stderr,  "\n");
+    }
 }

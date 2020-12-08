@@ -1,11 +1,15 @@
 OUTFILE = tablegen
 OBJS = main.o \
        dictionary.o \
+       fsm.o \
+       item.o \
        grammar.o \
+       production.o \
+       state.o \
+       symbol.o \
        vector.o
 
 CC ?= gcc
-CFLAGS = -ggdb -O0
 CCLD = $(CC)
 CCLDFLAGS =
 LIBS =
