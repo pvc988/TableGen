@@ -86,3 +86,14 @@ bool StateEquivalent(State *a, State *b)
 
     return true;
 }
+
+Transition *StateGetTransition(State *state, Symbol *symbol)
+{
+    for(size_t i = 0; i < state->Transitions->ItemCount; ++i)
+    {
+        Transition *trans = (Transition *)state->Transitions->Items[i];
+        if(trans->Symbol == symbol)
+            return trans;
+    }
+    return 0;
+}

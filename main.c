@@ -4,6 +4,7 @@
 
 #include "fsm.h"
 #include "grammar.h"
+#include "parsetable.h"
 
 static void usageInfo(void);
 
@@ -47,6 +48,14 @@ int main(int argc, char *argv[])
     FSM *fsm = FSMCreate(grammar);
     if(lalr) FSMBuildLALR1States(fsm);
     else FSMBuildLR1States(fsm);
+
+    ParseTable *pt = ParseTableCreate(fsm);
+    ParseTableToFile(pt, outputFileName);
+
+    // delete objects after use
+    ParseTableDelete(pt);
+    FSMDelete(fsm);
+    GrammarDelete(grammar);
 
     return 0;
 }

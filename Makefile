@@ -4,6 +4,7 @@ OBJS = main.o \
        fsm.o \
        item.o \
        grammar.o \
+       parsetable.o \
        production.o \
        state.o \
        symbol.o \
@@ -11,6 +12,7 @@ OBJS = main.o \
        vector.o
 
 CC ?= gcc
+CFLAGS ?= -O2 -fomit-frame-pointer
 CCLD = $(CC)
 CCLDFLAGS =
 LIBS =

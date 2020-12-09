@@ -107,6 +107,7 @@ Grammar *GrammarFromFile(const char *filename)
             leftSym = SymbolCreate(leftSide, false);
             DictionaryAddItem(grammar->Symbols, leftSym->Name, leftSym);
         }
+        leftSym->Used = true;
 
         // split right side using '|' as production separator
         char *symbolStart = rightSide;
@@ -129,6 +130,7 @@ Grammar *GrammarFromFile(const char *filename)
                         sym = SymbolCreate(symbolStart, true);
                         DictionaryAddItem(grammar->Symbols, symbolStart, sym);
                     }
+                    sym->Used = true;
                     VectorAppendItem(rightSyms, sym);
                     if(c) symbolStart = ++right;
                     c = *right;
@@ -172,6 +174,15 @@ Grammar *GrammarFromFile(const char *filename)
         return 0;
     }
 
+    // get rid of unused symbols
+    for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
+    {
+        Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
+        if(sym->Used) continue;
+        DictionaryRemoveItem(grammar->Symbols, sym->Name);
+        --i;
+    }
+
     // resolve terminal/non-terminal and print all symbols
     fprintf(stderr, "\nSymbols:\n");
     for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
@@ -211,7 +222,7 @@ Grammar *GrammarFromFile(const char *filename)
     for(size_t i = 0 ; i < grammar->Productions->ItemCount; ++i)
     {
         Production *prod = (Production *)grammar->Productions->Items[i];
-        fprintf(stderr, "%s ->", prod->Left->Name);
+        fprintf(stderr, "%zu. %s ->", prod->Index, prod->Left->Name);
 
         for(size_t i = 0; i < prod->Right->ItemCount; ++i)
         {
@@ -236,6 +247,7 @@ Grammar *GrammarCreate(void)
     grammar->EndOfInput = SymbolCreate(endOfInputSymbolName, true);
     grammar->EmptySymbol = SymbolCreate(emptySymbolName, true);
     grammar->ErrorSymbol = SymbolCreate(errorSymbolName, true);
+    grammar->EndOfInput->Used = true;
     grammar->EmptySymbol->Nullable = true;
     DictionaryAddItem(grammar->Symbols, grammar->EndOfInput->Name, grammar->EndOfInput);
     DictionaryAddItem(grammar->Symbols, grammar->EmptySymbol->Name, grammar->EmptySymbol);

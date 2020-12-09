@@ -10,6 +10,8 @@ grammar.h
 item.c
 item.h
 main.c
+parsetable.c
+parsetable.h
 production.c
 production.h
 state.c
