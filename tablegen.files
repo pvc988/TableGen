@@ -18,6 +18,14 @@ state.c
 state.h
 symbol.c
 symbol.h
+test/Makefile
+test/lexer.c
+test/lexer.h
+test/main.c
+test/parser.c
+test/parser.h
+test/sample.inp
+test/test.grm
 transition.c
 transition.h
 vector.c

@@ -13,17 +13,20 @@ OBJS = main.o \
 
 CC ?= gcc
 CFLAGS ?= -O2 -fomit-frame-pointer
-CCLD = $(CC)
-CCLDFLAGS =
-LIBS =
+CCLD ?= $(CC)
+CCLDFLAGS ?=
+LIBS ?=
 
 all: $(OUTFILE)
 
 $(OUTFILE): $(OBJS)
 	$(CCLD) $(CCLDFLAGS) $(OBJS) -o $(OUTFILE) $(LIBS)
 
+test: $(OUTFILE)
+	$(MAKE) -C test
+
 clean:
 	$(RM) $(OUTFILE) $(OBJS)
 
-.PHONY: clean
+.PHONY: clean test
 

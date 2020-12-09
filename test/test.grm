@@ -1,0 +1,16 @@
+# simple expression/term/factor grammar example
+
+S -> E;
+
+E -> E + T  { add }
+   | E - T  { sub }
+   | T ;
+
+T -> T * F  { mul }
+   | T / F  { div }
+   | F ;
+
+F -> id     { ident }  # convert token text to value
+   | num    { number } # get value from symbol table
+   | ( E )  { paren }
+   ;
