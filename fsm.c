@@ -96,6 +96,7 @@ static void closeLR1(Grammar *grammar, Vector *itemSet)
                         VectorAppendItem(firstBase, item->Production->Right->Items[i]); // tail
                     VectorAppendItem(firstBase, lookahead);
                     Vector *first = calcFirstSet(firstBase);
+                    VectorDelete(firstBase);
 
                     Item *newItem = ItemCreateLA(false, prod, 0, first);
                     bool merged = false;
@@ -237,7 +238,8 @@ void buildLR1orLALR1States(FSM *fsm, bool lalr)
                     VectorAppendItem(state->Transitions, newTransition);
                     changed = true;
                 }
-            }
+            }            
+            VectorDelete(currentSyms);
         }
     }
 
@@ -268,7 +270,15 @@ FSM *FSMCreate(Grammar *grammar)
 
 void FSMDelete(FSM *fsm)
 {
-    if(fsm->States) VectorDelete(fsm->States);
+    if(fsm->States)
+    {
+        for(size_t i = 0; i < fsm->States->ItemCount; ++i)
+        {
+            State *state = (State *)fsm->States->Items[i];
+            StateDelete(state);
+        }
+        VectorDelete(fsm->States);
+    }
     if(fsm->Accept) StateDelete(fsm->Accept);
     free(fsm);
 }

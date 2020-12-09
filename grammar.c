@@ -64,7 +64,7 @@ Grammar *GrammarFromFile(const char *filename)
             ruleBuf[chrIdx++] = c;
         }
         // get rid of any trailing space (multiples were already dealt with)
-        if(ruleBuf[chrIdx - 1] == ' ')
+        if(chrIdx && ruleBuf[chrIdx - 1] == ' ')
             ruleBuf[--chrIdx] = 0;
 
         // append terminating character
@@ -181,6 +181,10 @@ Grammar *GrammarFromFile(const char *filename)
         if(sym->Used) continue;
         DictionaryRemoveItem(grammar->Symbols, sym->Name);
         --i;
+        if(sym != grammar->EndOfInput &&
+                sym != grammar->EmptySymbol &&
+                sym != grammar->ErrorSymbol)
+            SymbolDelete(sym);
     }
 
     // resolve terminal/non-terminal and print all symbols
@@ -258,8 +262,31 @@ Grammar *GrammarCreate(void)
 
 void GrammarDelete(Grammar *grammar)
 {
-    if(grammar->Productions) VectorDelete(grammar->Productions);
-    if(grammar->Symbols) DictionaryDelete(grammar->Symbols);
+    if(grammar->Productions)
+    {
+        for(size_t i = 0; i < grammar->Productions->ItemCount; ++i)
+        {
+            Production *prod = (Production *)grammar->Productions->Items[i];
+            ProductionDelete(prod);
+        }
+        VectorDelete(grammar->Productions);
+    }
+    if(grammar->Symbols)
+    {
+        for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
+        {
+            Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
+            if(sym == grammar->EndOfInput ||
+                    sym == grammar->EmptySymbol ||
+                    sym == grammar->ErrorSymbol)
+                continue;
+            SymbolDelete(sym);
+        }
+        DictionaryDelete(grammar->Symbols);
+    }
+    if(grammar->EndOfInput) SymbolDelete(grammar->EndOfInput);
+    if(grammar->EmptySymbol) SymbolDelete(grammar->EmptySymbol);
+    if(grammar->ErrorSymbol) SymbolDelete(grammar->ErrorSymbol);
     free(grammar);
 }
 
