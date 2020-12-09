@@ -104,10 +104,17 @@ ParseTable *ParseTableCreate(FSM *FSM)
                 a->State = dest;
                 if(currSymbol->Terminal)
                 {   // shift or accept
-                    if(!isCellFree(a, item))
+                    if(a->Type != AT_ERROR &&
+                            a->Type != AT_SHIFT &&
+                            a->Type != AT_ACCEPT)
                     {
-                        ParseTableDelete(pt);
-                        return 0;
+                        if(a->State != dest)
+                        {
+                            fprintf(stderr, "Conflict in production %zu\n",
+                                    item->Production->Index);
+                            ParseTableDelete(pt);
+                            return 0;
+                        }
                     }
                     a->Type = currSymbol == pt->FSM->Grammar->EndOfInput ?
                                 AT_ACCEPT : AT_SHIFT;
