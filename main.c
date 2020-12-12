@@ -1,10 +1,13 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "fsm.h"
 #include "grammar.h"
 #include "parsetable.h"
+
+unsigned debug;
 
 static void usageInfo(void);
 
@@ -38,6 +41,8 @@ int main(int argc, char *argv[])
 
     bool lalr = argc > 3 && !strcmp(argv[3], "LALR1");
 
+    if(argc > 4) debug = atoi(argv[4]);
+
     char *grammarFileName = argv[1];
     char *outputFileName = argv[2];
 
@@ -63,8 +68,9 @@ int main(int argc, char *argv[])
 
 void usageInfo(void)
 {
-    fprintf(stderr, "usage: tablegen <grammar> <output> <algorithm>\n");
+    fprintf(stderr, "usage: tablegen <grammar> <output> <algorithm> [debug]\n");
     fprintf(stderr, "   grammar - grammar file to be used for table generation\n");
     fprintf(stderr, "   output - name of file to be generated\n");
     fprintf(stderr, "   algorithm - LR1 or LALR1 algorithm can be used\n");
+    fprintf(stderr, "   debug - numeric message specifying debug message level\n");
 }

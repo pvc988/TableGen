@@ -7,6 +7,8 @@
 #include "production.h"
 #include "symbol.h"
 
+extern unsigned debug;
+
 static const char *endOfInputSymbolName = "$";
 static const char *emptySymbolName = "~";
 static const char *errorSymbolName = "!";
@@ -74,7 +76,7 @@ Grammar *GrammarFromFile(const char *filename)
         if(feof(f))
             break;
 
-        fprintf(stderr, "Found rule: '%s'\n", ruleBuf);
+        if(debug >= 1) fprintf(stderr, "Found rule: '%s'\n", ruleBuf);
 
         // split left and right sides
         char *arrowHead = strchr(ruleBuf, '>');
@@ -96,14 +98,14 @@ Grammar *GrammarFromFile(const char *filename)
         // get rid of any right side leading space
         if(rightSide[0] == ' ') ++rightSide;
 
-        fprintf(stderr, "  Left side: '%s'\n", leftSide);
-        fprintf(stderr, "  Right side: '%s'\n", rightSide);
+        if(debug >= 1) fprintf(stderr, "  Left side: '%s'\n", leftSide);
+        if(debug >= 1) fprintf(stderr, "  Right side: '%s'\n", rightSide);
 
         // create left side symbol
         Symbol *leftSym = (Symbol *)DictionaryGetValue(grammar->Symbols, leftSide);
         if(!leftSym)
         {
-            fprintf(stderr, "    New symbol: '%s'\n", leftSide);
+            if(debug >= 1) fprintf(stderr, "    New symbol: '%s'\n", leftSide);
             leftSym = SymbolCreate(leftSide, false);
             DictionaryAddItem(grammar->Symbols, leftSym->Name, leftSym);
         }
@@ -126,7 +128,7 @@ Grammar *GrammarFromFile(const char *filename)
                     Symbol *sym = (Symbol *)DictionaryGetValue(grammar->Symbols, symbolStart);
                     if(!sym)
                     {
-                        fprintf(stderr, "    New symbol: '%s'\n", symbolStart);
+                        if(debug >= 1) fprintf(stderr, "    New symbol: '%s'\n", symbolStart);
                         sym = SymbolCreate(symbolStart, true);
                         DictionaryAddItem(grammar->Symbols, symbolStart, sym);
                     }
@@ -145,8 +147,11 @@ Grammar *GrammarFromFile(const char *filename)
             if(c == '|' || !c)
             {                
                 if(idStart && idStart[0] == ' ') ++idStart;
-                if(idStart) fprintf(stderr, "    New production: '%s'\n", idStart);
-                else fprintf(stderr, "    New anonymous production\n");
+                if(debug >= 1)
+                {
+                    if(idStart) fprintf(stderr, "    New production: '%s'\n", idStart);
+                    else fprintf(stderr, "    New anonymous production\n");
+                }
                 Production *newProduction = ProductionCreate(idStart, leftSym, rightSyms);
                 VectorAppendItem(grammar->Productions, newProduction);
                 idStart = 0;
@@ -188,7 +193,7 @@ Grammar *GrammarFromFile(const char *filename)
     }
 
     // resolve terminal/non-terminal and print all symbols
-    fprintf(stderr, "\nSymbols:\n");
+    if(debug >= 1) fprintf(stderr, "\nSymbols:\n");
     for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
     {
         Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
@@ -201,7 +206,7 @@ Grammar *GrammarFromFile(const char *filename)
                 break;
             }
         }
-        fprintf(stderr, "'%s': %s\n", sym->Name, sym->Terminal ? "terminal" : "non-terminal");
+        if(debug >= 1) fprintf(stderr, "'%s': %s\n", sym->Name, sym->Terminal ? "terminal" : "non-terminal");
     }
 
     // TODO: Add malformed rule checks here
@@ -222,20 +227,20 @@ Grammar *GrammarFromFile(const char *filename)
     }
 
     // print productions
-    fprintf(stderr, "\nProductions:\n");
+    if(debug >= 1) fprintf(stderr, "\nProductions:\n");
     for(size_t i = 0 ; i < grammar->Productions->ItemCount; ++i)
     {
         Production *prod = (Production *)grammar->Productions->Items[i];
-        fprintf(stderr, "%zu. %s ->", prod->Index, prod->Left->Name);
+        if(debug >= 1) fprintf(stderr, "%zu. %s ->", prod->Index, prod->Left->Name);
 
         for(size_t i = 0; i < prod->Right->ItemCount; ++i)
         {
             Symbol *sym = (Symbol *)prod->Right->Items[i];
-            fprintf(stderr, " %s", sym->Name);
+            if(debug >= 1) fprintf(stderr, " %s", sym->Name);
         }
 
         if(prod->Id) fprintf(stderr, " {%s}", prod->Id);
-        fprintf(stderr, "\n");
+        if(debug >= 1) fprintf(stderr, "\n");
     }
 
     return grammar;
@@ -325,16 +330,19 @@ void GrammarBuildFirstSets(Grammar *grammar)
     }
 
     // print first sets
-    fprintf(stderr, "\nFirst sets:\n");
-    for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
+    if(debug >= 2)
     {
-        Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
-        fprintf(stderr, "'%s':", sym->Name);
-        for(size_t i = 0; i < sym->First->ItemCount; ++i)
+        fprintf(stderr, "\nFirst sets:\n");
+        for(size_t i = 0; i < grammar->Symbols->ItemCount; ++i)
         {
-            Symbol *s = (Symbol *)sym->First->Items[i];
-            fprintf(stderr, " %s", s->Name);
+            Symbol *sym = (Symbol *)grammar->Symbols->Items[i].Data;
+            fprintf(stderr, "'%s':", sym->Name);
+            for(size_t i = 0; i < sym->First->ItemCount; ++i)
+            {
+                Symbol *s = (Symbol *)sym->First->Items[i];
+                fprintf(stderr, " %s", s->Name);
+            }
+            fprintf(stderr,  "\n");
         }
-        fprintf(stderr,  "\n");
     }
 }

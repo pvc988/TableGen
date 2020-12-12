@@ -11,6 +11,8 @@
 #include "transition.h"
 #include "vector.h"
 
+extern unsigned debug;
+
 static void printItem(Item *item)
 {
     fprintf(stderr, "%s%s -> [", item->Core ? "" : "+", item->Production->Left->Name);
@@ -250,12 +252,15 @@ void buildLR1orLALR1States(FSM *fsm, bool lalr)
         state->Index = i;
     }
 
-    fprintf(stderr, "\nFSM states:\n");
+    if(debug >= 2) fprintf(stderr, "\nFSM states:\n");
     for(size_t i = 0; i < fsm->States->ItemCount; ++i)
     {
         State *state = (State *)fsm->States->Items[i];
-        fprintf(stderr, "\nState %zu\n", state->Index);
-        printState(fsm->Accept, state);
+        if(debug >= 2)
+        {
+            fprintf(stderr, "\nState %zu\n", state->Index);
+            printState(fsm->Accept, state);
+        }
     }
 }
 
