@@ -239,8 +239,11 @@ Grammar *GrammarFromFile(const char *filename)
             if(debug >= 1) fprintf(stderr, " %s", sym->Name);
         }
 
-        if(prod->Id) fprintf(stderr, " {%s}", prod->Id);
-        if(debug >= 1) fprintf(stderr, "\n");
+        if(debug >= 1)
+        {
+            if(prod->Id) fprintf(stderr, " {%s}", prod->Id);
+            fprintf(stderr, "\n");
+        }
     }
 
     return grammar;
