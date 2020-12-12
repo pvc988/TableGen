@@ -50,10 +50,11 @@ int main(int argc, char *argv[])
     else FSMBuildLR1States(fsm);
 
     ParseTable *pt = ParseTableCreate(fsm);
-    ParseTableToFile(pt, outputFileName);
-
-    // delete objects after use
-    ParseTableDelete(pt);
+    if(pt)
+    {
+        ParseTableToFile(pt, outputFileName);
+        ParseTableDelete(pt);
+    }
     FSMDelete(fsm);
     GrammarDelete(grammar);
 
