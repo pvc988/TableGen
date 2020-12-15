@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
 void usageInfo(void)
 {
-    fprintf(stderr, "usage: tablegen [options] <grammar>\n");
+    fprintf(stderr, "usage: tablegen [options] <grammar> -o <filename>\n");
     fprintf(stderr, "   grammar - grammar file to be used for table generation\n");
     fprintf(stderr, "   -o <filename> - output file path\n");
     fprintf(stderr, "   -a <algorithm> - LR1 or LALR1 algorithm can be used (default: LR1)\n");

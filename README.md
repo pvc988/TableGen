@@ -99,3 +99,13 @@ Building TableGen should be as simple as executing `make` command in top project
 * `CCLD` selects linker used (defaults to `CC`)
 * `CCLDFLAGS` specifies flags for `CCLD` command
 * `LIBS` specifies any extra libraries needed to build the executable
+
+### Usage
+
+To use this tool, you have to, at least, specify input grammar file and output table file path. Full usage message:
+
+    usage: tablegen [options] <grammar> -o <filename>
+        grammar - grammar file to be used for table generation
+        -o <filename> - output file path
+        -a <algorithm> - LR1 or LALR1 algorithm can be used (default: LR1)
+        -d <value> - numeric value specifying debug message level (default: 0)
