@@ -11,40 +11,96 @@ unsigned debug;
 
 static void usageInfo(void);
 
+enum
+{
+    ARG_GRAMMAR = 0,
+    ARG_OUTPUT,
+    ARG_ALGO,
+    ARG_DEBUG
+};
+
 int main(int argc, char *argv[])
 {
-    if(argc < 2)
+    // parse command line options
+    char *grammarFileName = 0;
+    char *outputFileName = 0;
+    bool lalr = false;
+    unsigned nextArg = ARG_GRAMMAR;
+    for(int i = 1; i < argc; ++i)
+    {
+        char *arg = argv[i];
+        if(arg[0] == '-')
+        {   // option
+            switch(arg[1])
+            {
+            case 'o':
+                nextArg = ARG_OUTPUT;
+                break;
+            case 'a':
+                nextArg = ARG_ALGO;
+                break;
+            case 'd':
+                nextArg = ARG_DEBUG;
+                break;
+            default:
+                fprintf(stderr, "Unknown option '%s'\n", arg);
+                usageInfo();
+                return -1;
+            }
+        }
+        else
+        {   // value
+            switch(nextArg)
+            {
+            case ARG_GRAMMAR:
+                if(grammarFileName)
+                {
+                    fprintf(stderr, "Grammar file already specified\n");
+                    return -1;
+                }
+                grammarFileName = arg;
+                break;
+            case ARG_OUTPUT:
+                if(outputFileName)
+                {
+                    fprintf(stderr, "Output file already specified\n");
+                    return -1;
+                }
+                outputFileName = arg;
+                break;
+            case ARG_ALGO:
+                if(!strcmp(arg, "LR1")) lalr = false;
+                else if(!strcmp(arg, "LALR1")) lalr = true;
+                else
+                {
+                    fprintf(stderr, "Unknown parsing algorithm '%s'\n", arg);
+                    return -1;
+                }
+                break;
+            case ARG_DEBUG:
+                debug = strtoul(arg, 0, 0);
+                break;
+            default:
+                fprintf(stderr, "Couldn't parse command line options\n");
+                usageInfo();
+                return -1;
+            }
+            nextArg = ARG_GRAMMAR;
+        }
+    }
+
+    if(!grammarFileName)
     {
         fprintf(stderr, "Missing grammar filename\n");
         usageInfo();
         return -1;
     }
-    if(argc < 3)
+    if(!outputFileName)
     {
-        fprintf(stderr, "Missing table filename\n");
+        fprintf(stderr, "Missing output filename\n");
         usageInfo();
         return -1;
     }
-    if(argc < 4)
-    {
-        fprintf(stderr, "Missing algorithm name\n");
-        usageInfo();
-        return -1;
-    }
-
-    if(strcasecmp("LR1", argv[3]) && strcasecmp("LALR1", argv[3]))
-    {
-        fprintf(stderr, "Invalid algorithm\n");
-        usageInfo();
-        return -1;
-    }
-
-    bool lalr = argc > 3 && !strcmp(argv[3], "LALR1");
-
-    if(argc > 4) debug = atoi(argv[4]);
-
-    char *grammarFileName = argv[1];
-    char *outputFileName = argv[2];
 
     Grammar *grammar = GrammarFromFile(grammarFileName);
     if(!grammar) return -1;
@@ -68,9 +124,9 @@ int main(int argc, char *argv[])
 
 void usageInfo(void)
 {
-    fprintf(stderr, "usage: tablegen <grammar> <output> <algorithm> [debug]\n");
+    fprintf(stderr, "usage: tablegen [options] <grammar>\n");
     fprintf(stderr, "   grammar - grammar file to be used for table generation\n");
-    fprintf(stderr, "   output - name of file to be generated\n");
-    fprintf(stderr, "   algorithm - LR1 or LALR1 algorithm can be used\n");
-    fprintf(stderr, "   debug - numeric message specifying debug message level\n");
+    fprintf(stderr, "   -o <filename> - output file path\n");
+    fprintf(stderr, "   -a <algorithm> - LR1 or LALR1 algorithm can be used (default: LR1)\n");
+    fprintf(stderr, "   -d <value> - numeric value specifying debug message level (default: 0)\n");
 }
