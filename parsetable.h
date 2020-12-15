@@ -39,4 +39,4 @@ typedef struct ParseTable
 
 ParseTable *ParseTableCreate(FSM *FSM);
 void ParseTableDelete(ParseTable *pt);
-bool ParseTableToFile(ParseTable *pt, const char *filename);
+bool ParseTableToFile(ParseTable *pt, const char *filename, bool compact);

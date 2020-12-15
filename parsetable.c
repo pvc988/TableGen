@@ -50,6 +50,24 @@ static uint32_t encodeAction(Action *a)
     return (uint32_t)-1;
 }
 
+static uint16_t encodeAction16(Action *a)
+{
+    switch(a->Type)
+    {
+    case AT_ERROR:
+        return 0x0000u;
+    case AT_ACCEPT:
+        return 0x0001u;
+    case AT_SHIFT:
+        return 0x4000u | a->State->Index;
+    case AT_REDUCE:
+        return 0x8000u | a->Production->Index;
+    case AT_GOTO:
+        return 0xC000u | a->State->Index;
+    }
+    return (uint16_t)-1;
+}
+
 ParseTable *ParseTableCreate(FSM *FSM)
 {
     ParseTable *pt = (ParseTable *)calloc(1, sizeof(ParseTable));
@@ -134,65 +152,180 @@ void ParseTableDelete(ParseTable *pt)
     free(pt);
 }
 
-bool ParseTableToFile(ParseTable *pt, const char *filename)
+bool ParseTableToFile(ParseTable *pt, const char *filename, bool compact)
 {
-    FILE *f = fopen(filename, "wb");
-    if(!f) return false;
 
-    // write magic value
-    fwrite("LRPT", 4, 1, f);
-
-    // write right symbol counts and left symbol for each production
-    // (needed for reduce step)
-    // and calculate namedProdCount while at it
-    uint32_t prodCount = pt->FSM->Grammar->Productions->ItemCount;
-    uint32_t namedProdCount = 0;
-    fwrite(&prodCount, 4, 1, f);
-    for(uint32_t i = 0; i < prodCount; ++i)
+    if(compact)
     {
-        Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
-        if(prod->Id) ++namedProdCount;
-        uint32_t leftIdx = prod->Left->Index;
-        fwrite(&leftIdx, 4, 1, f);
-        uint32_t symCount = prod->Right->ItemCount;
-        fwrite(&symCount, 4, 1, f);
+        // check if compact format can be used
+        if(pt->FSM->Grammar->Productions->ItemCount > 16382)
+        {
+            fprintf(stderr, "Can't use compact file format: production count > 16382\n");
+            return false;
+        }
+        if(pt->ColumnCount > 65535)
+        {
+            fprintf(stderr, "Can't use compact file format: symbol count > 65535\n");
+            return false;
+        }
+        uint16_t cols = pt->ColumnCount;
+        for(uint16_t col = 0; col < cols; ++col)
+        {
+            Symbol *sym = pt->Header[col];
+            if(strlen(sym->Name) > 255)
+            {
+                fprintf(stderr, "Can't use compact file format: "
+                                "there is a symbol with name longer than 255 "
+                                "characters\n");
+                return false;
+            }
+        }
+        if(pt->RowCount > 16382)
+        {
+            fprintf(stderr, "Can't use compact file format: state count > 16382\n");
+            return false;
+        }
+        uint16_t prodCount = pt->FSM->Grammar->Productions->ItemCount;
+        uint16_t namedProdCount = 0;
+        for(uint16_t i = 0; i < prodCount; ++i)
+        {
+            Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
+            if(prod->Right->ItemCount > 65535)
+            {
+                fprintf(stderr, "Can't use compact file format: "
+                                "there is a production with more than 65535 "
+                                "right side symbols\n");
+                return false;
+            }
+            if(prod->Id)
+            {
+                ++namedProdCount;
+                if(strlen(prod->Id) > 255)
+                {
+                    fprintf(stderr, "Can't use compact file format: "
+                                    "there is a production with id longer than 255 "
+                                    "characters\n");
+                    return false;
+                }
+            }
+        }
+
+        // open/create output file
+        FILE *f = fopen(filename, "wb");
+        if(!f) return false;
+
+        // write magic value
+        fwrite("LRCT", 4, 1, f);    // LR Compact Table
+
+        // write right symbol counts and left symbol for each production
+        // (needed for reduce step)
+        // and calculate namedProdCount while at it
+        fwrite(&prodCount, 2, 1, f);
+        for(uint16_t i = 0; i < prodCount; ++i)
+        {
+            Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
+            uint16_t leftIdx = prod->Left->Index;
+            fwrite(&leftIdx, 2, 1, f);
+            uint16_t symCount = prod->Right->ItemCount;
+            fwrite(&symCount, 2, 1, f);
+        }
+
+        // write named production indices and ids
+        fwrite(&namedProdCount, 2, 1, f);
+        for(uint16_t i = 0; i < prodCount; ++i)
+        {
+            Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
+            if(!prod->Id) continue;
+            uint16_t prodIdx = prod->Index;
+            fwrite(&prodIdx, 2, 1, f);
+            uint8_t idLen = strlen(prod->Id);
+            fwrite(&idLen, 1, 1, f);
+            fwrite(prod->Id, idLen, 1, f);
+        }
+
+        // write table header (symbols)
+        fwrite(&cols, 2, 1, f);
+        for(uint16_t col = 0; col < cols; ++col)
+        {
+            Symbol *sym = pt->Header[col];
+            uint8_t nameLen = strlen(sym->Name);
+            fwrite(&nameLen, 1, 1, f);
+            fwrite(sym->Name, nameLen, 1, f);
+        }
+
+        // write table cells
+        uint16_t rows = pt->RowCount;
+        fwrite(&rows, 2, 1, f);
+        size_t tableCells = pt->ColumnCount * pt->RowCount;
+        for(size_t i = 0; i < tableCells; ++i)
+        {
+            Action *a = pt->Actions + i;
+            uint16_t cell = encodeAction16(a);
+            fwrite(&cell, 2, 1, f);
+        }
+        fclose(f);
+    }
+    else
+    {
+        // open/create output file
+        FILE *f = fopen(filename, "wb");
+        if(!f) return false;
+
+        // write magic value
+        fwrite("LRPT", 4, 1, f);    // LR Parsing Table
+
+        // write right symbol counts and left symbol for each production
+        // (needed for reduce step)
+        // and calculate namedProdCount while at it
+        uint32_t prodCount = pt->FSM->Grammar->Productions->ItemCount;
+        uint32_t namedProdCount = 0;
+        fwrite(&prodCount, 4, 1, f);
+        for(uint32_t i = 0; i < prodCount; ++i)
+        {
+            Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
+            if(prod->Id) ++namedProdCount;
+            uint32_t leftIdx = prod->Left->Index;
+            fwrite(&leftIdx, 4, 1, f);
+            uint32_t symCount = prod->Right->ItemCount;
+            fwrite(&symCount, 4, 1, f);
+        }
+
+        // write named production indices and ids
+        fwrite(&namedProdCount, 4, 1, f);
+        for(uint32_t i = 0; i < prodCount; ++i)
+        {
+            Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
+            if(!prod->Id) continue;
+            uint32_t prodIdx = prod->Index;
+            fwrite(&prodIdx, 4, 1, f);
+            uint32_t idLen = strlen(prod->Id);
+            fwrite(&idLen, 4, 1, f);
+            fwrite(prod->Id, idLen, 1, f);
+        }
+
+        // write table header (symbols)
+        uint32_t cols = pt->ColumnCount;
+        fwrite(&cols, 4, 1, f);
+        for(uint32_t col = 0; col < cols; ++col)
+        {
+            Symbol *sym = pt->Header[col];
+            uint32_t nameLen = strlen(sym->Name);
+            fwrite(&nameLen, 4, 1, f);
+            fwrite(sym->Name, nameLen, 1, f);
+        }
+
+        // write table cells
+        uint32_t rows = pt->RowCount;
+        fwrite(&rows, 4, 1, f);
+        size_t tableCells = pt->ColumnCount * pt->RowCount;
+        for(size_t i = 0; i < tableCells; ++i)
+        {
+            Action *a = pt->Actions + i;
+            uint32_t cell = encodeAction(a);
+            fwrite(&cell, 4, 1, f);
+        }
+        fclose(f);
     }
 
-    // write named production indices and ids
-    fwrite(&namedProdCount, 4, 1, f);
-    for(uint32_t i = 0; i < prodCount; ++i)
-    {
-        Production *prod = (Production *)pt->FSM->Grammar->Productions->Items[i];
-        if(!prod->Id) continue;
-        uint32_t prodIdx = prod->Index;
-        fwrite(&prodIdx, 4, 1, f);
-        uint32_t idLen = strlen(prod->Id);
-        fwrite(&idLen, 4, 1, f);
-        fwrite(prod->Id, idLen, 1, f);
-    }
-
-    // write table header (symbols)
-    uint32_t cols = pt->ColumnCount;
-    fwrite(&cols, 4, 1, f);
-    for(uint32_t col = 0; col < cols; ++col)
-    {
-        Symbol *sym = pt->Header[col];
-        uint32_t nameLen = strlen(sym->Name);
-        fwrite(&nameLen, 4, 1, f);
-        fwrite(sym->Name, nameLen, 1, f);
-    }
-
-    // write table cells
-    uint32_t rows = pt->RowCount;
-    fwrite(&rows, 4, 1, f);
-    size_t tableCells = pt->ColumnCount * pt->RowCount;
-    for(size_t i = 0; i < tableCells; ++i)
-    {
-        Action *a = pt->Actions + i;
-        uint32_t cell = encodeAction(a);
-        fwrite(&cell, 4, 1, f);
-    }
-
-    fclose(f);
     return true;
 }
