@@ -24,7 +24,7 @@ clean:
 .SUFFIXES: .grm .lrpt
 
 %.lrpt: %.grm
-	$(TG) $^ $@ $(TGALGO)
+	$(TG) $^ -o $@ -a $(TGALGO)
 
 .PHONY: clean
 

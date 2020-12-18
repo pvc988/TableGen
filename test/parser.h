@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdbool.h"
+#include <stdbool.h>
 
 bool ParserCreate(const char *filename);
 void ParserDelete(void);
